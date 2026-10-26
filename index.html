@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>CYBER DASH 2099 - Custom Synthwave Racer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #030308;
+      font-family: 'Rajdhani', sans-serif;
+      color: #fff;
+    }
+    .font-orbitron {
+      font-family: 'Orbitron', sans-serif;
+    }
+    .neon-text-pink {
+      text-shadow: 0 0 8px #ff007f, 0 0 20px #ff007f, 0 0 35px #ff007f;
+    }
+    .neon-text-cyan {
+      text-shadow: 0 0 8px #00f3ff, 0 0 20px #00f3ff, 0 0 35px #00f3ff;
+    }
+    .cyber-panel {
+      background: rgba(10, 10, 25, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(0, 243, 255, 0.3);
+      box-shadow: 0 0 20px rgba(0, 243, 255, 0.15), inset 0 0 15px rgba(0, 243, 255, 0.05);
+    }
+    .cyber-btn {
+      background: linear-gradient(135deg, #ff007f 0%, #7928ca 100%);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+    }
+    .cyber-btn:hover {
+      transform: scale(1.03);
+      filter: brightness(1.25);
+      box-shadow: 0 0 25px rgba(255, 0, 127, 0.6);
+    }
+    .cyber-btn:active {
+      transform: scale(0.97);
+    }
+    .cyber-btn-secondary {
+      background: linear-gradient(135deg, rgba(0, 243, 255, 0.2) 0%, rgba(121, 40, 202, 0.3) 100%);
+      border: 1px solid #00f3ff;
+      transition: all 0.2s ease;
+      clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+    }
+    .cyber-btn-secondary:hover {
+      background: rgba(0, 243, 255, 0.4);
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
+    }
+    /* Efeito Scanlines CRT */
+    .scanlines {
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 4px, 6px 100%;
+      pointer-events: none;
+    }
+    /* Color Swatch Options */
+    .color-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .color-dot:hover, .color-dot.active {
+      transform: scale(1.2);
+      border-color: #00f3ff;
+      box-shadow: 0 0 10px currentColor;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(5, 5, 15, 0.8); }
+    ::-webkit-scrollbar-thumb { background: #00f3ff; border-radius: 3px; }
+  </style>
+</head>
+<body class="w-screen h-screen overflow-hidden">
+
+  <!-- 3D WebGL Canvas Container -->
+  <div id="canvas-container" class="absolute inset-0 z-0"></div>
+
+  <!-- CRT Retro Scanlines Overlay -->
+  <div class="scanlines absolute inset-0 z-10"></div>
+
+  <!-- HUD Em Tempo Real -->
+  <div id="hud" class="hidden absolute inset-0 z-20 pointer-events-none p-4 md:p-6 flex flex-col justify-between">
+    <!-- Top HUD Bar -->
+    <div class="flex justify-between items-start">
+      <!-- Distância & Placar -->
+      <div class="cyber-panel p-3 rounded-lg flex flex-col gap-1 border-l-4 border-cyan-400">
+        <span class="text-[10px] tracking-widest text-cyan-400 font-orbitron uppercase">Distância</span>
+        <span id="score-text" class="text-2xl md:text-3xl font-black font-orbitron text-white">0 m</span>
+      </div>
+
+      <!-- Moedas & Gemas -->
+      <div class="flex gap-3">
+        <div class="cyber-panel px-4 py-2 rounded-lg flex items-center gap-2 border-l-4 border-yellow-400">
+          <span class="text-xl">🪙</span>
+          <div>
+            <div class="text-[9px] text-yellow-400 font-orbitron uppercase">Moedas</div>
+            <div id="coins-text" class="text-lg font-bold font-orbitron text-yellow-300">0</div>
+          </div>
+        </div>
+        <div class="cyber-panel px-4 py-2 rounded-lg flex items-center gap-2 border-l-4 border-purple-400">
+          <span class="text-xl">💎</span>
+          <div>
+            <div class="text-[9px] text-purple-400 font-orbitron uppercase">Gemas</div>
+            <div id="gems-text" class="text-lg font-bold font-orbitron text-purple-300">0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom HUD Bar -->
+    <div class="flex justify-between items-end">
+      <!-- Vida & Nitro -->
+      <div class="flex flex-col gap-3 w-48 md:w-64">
+        <!-- Barra de Vida -->
+        <div class="cyber-panel p-2 rounded-lg border-l-4 border-pink-500">
+          <div class="flex justify-between text-xs font-orbitron text-pink-400 mb-1">
+            <span>INTEGRIDADE</span>
+            <span id="health-val">100%</span>
+          </div>
+          <div class="w-full bg-gray-900/80 h-2.5 rounded-full overflow-hidden border border-pink-500/30">
+            <div id="health-bar" class="bg-gradient-to-r from-pink-600 to-pink-400 h-full w-full transition-all duration-200"></div>
+          </div>
+        </div>
+
+        <!-- Barra de Nitro -->
+        <div class="cyber-panel p-2 rounded-lg border-l-4 border-cyan-400">
+          <div class="flex justify-between text-xs font-orbitron text-cyan-400 mb-1">
+            <span>NITRO BOOST [W/↑]</span>
+            <span id="nitro-val">100%</span>
+          </div>
+          <div class="w-full bg-gray-900/80 h-2.5 rounded-full overflow-hidden border border-cyan-500/30">
+            <div id="nitro-bar" class="bg-gradient-to-r from-cyan-500 to-blue-400 h-full w-full transition-all duration-200"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Velocímetro Digital -->
+      <div class="cyber-panel px-6 py-3 rounded-lg text-right border-r-4 border-cyan-400">
+        <div class="text-[10px] text-cyan-400 font-orbitron uppercase tracking-widest">Velocidade</div>
+        <div id="speed-text" class="text-4xl md:text-5xl font-black italic font-orbitron text-cyan-300">120 <span class="text-xs font-normal text-white">KM/H</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controles Mobile Touches (Visíveis em Dispositivos Móveis) -->
+  <div id="mobile-controls" class="hidden absolute bottom-20 inset-x-0 z-30 flex justify-between px-6 pointer-events-auto md:hidden">
+    <div class="flex gap-2">
+      <button id="btn-left" class="w-16 h-16 bg-cyan-950/70 border-2 border-cyan-400 rounded-full text-2xl active:bg-cyan-500/50 flex items-center justify-center">◄</button>
+      <button id="btn-right" class="w-16 h-16 bg-cyan-950/70 border-2 border-cyan-400 rounded-full text-2xl active:bg-cyan-500/50 flex items-center justify-center">►</button>
+    </div>
+    <div class="flex gap-2">
+      <button id="btn-brake" class="w-16 h-16 bg-red-950/70 border-2 border-red-500 rounded-full text-xs font-bold active:bg-red-500/50 flex items-center justify-center">FREIO</button>
+      <button id="btn-boost" class="w-16 h-16 bg-amber-950/70 border-2 border-amber-400 rounded-full text-xs font-bold active:bg-amber-400/50 flex items-center justify-center">NITRO</button>
+    </div>
+  </div>
+
+  <!-- Menu Principal -->
+  <div id="main-menu" class="absolute inset-0 z-40 flex flex-col items-center justify-between p-6 bg-gradient-to-b from-black/80 via-transparent to-black/95">
+    <div class="mt-8 text-center">
+      <h1 class="text-5xl md:text-8xl font-black italic tracking-wider font-orbitron neon-text-pink mb-2">CYBER DASH</h1>
+      <p class="text-cyan-400 tracking-[0.3em] text-xs md:text-base font-orbitron neon-text-cyan">OUTRUN SYNTHWAVE 2099</p>
+    </div>
+
+    <!-- Painel de Seleção Rápida / Play -->
+    <div class="flex flex-col gap-4 w-full max-w-sm">
+      <button id="play-btn" class="cyber-btn py-4 text-2xl font-bold font-orbitron text-white uppercase tracking-widest text-center shadow-lg">
+        INICIAR CORRIDA
+      </button>
+      <button id="garage-btn" class="cyber-btn-secondary py-3 text-lg font-bold font-orbitron text-cyan-300 uppercase tracking-wider text-center">
+        🛠️ GARAGEM & OFICINA
+      </button>
+      <button id="audio-toggle-btn" class="bg-gray-900/80 border border-purple-500/50 text-purple-300 py-2.5 rounded text-sm font-bold font-orbitron tracking-wider">
+        🔊 SOM: LIGADO
+      </button>
+    </div>
+
+    <!-- Status & High Score -->
+    <div class="text-center text-sm text-gray-400 font-orbitron">
+      <p class="mb-1 text-xs text-gray-500">A/D ou Setas para virar | W: Nitro | S: Freio</p>
+      <p class="text-cyan-400">RECORDE ATUAL: <span id="high-score-menu" class="text-white font-bold">0 m</span></p>
+    </div>
+  </div>
+
+  <!-- Garagem & Oficina de Personalização Completa -->
+  <div id="garage-menu" class="hidden absolute inset-0 z-40 bg-black/90 flex flex-col justify-between p-4 md:p-6 overflow-y-auto">
+    <!-- Top Bar Garage -->
+    <div class="flex justify-between items-center border-b border-cyan-500/30 pb-3">
+      <div>
+        <h2 class="text-2xl md:text-4xl font-black font-orbitron text-cyan-400 neon-text-cyan">OFICINA CYBER</h2>
+        <p class="text-xs text-gray-400 font-orbitron">Personalize e Melhore suas Naves</p>
+      </div>
+      <div class="flex gap-4">
+        <div class="text-yellow-400 text-base font-orbitron">🪙 <span id="shop-coins">0</span></div>
+        <div class="text-purple-400 text-base font-orbitron">💎 <span id="shop-gems">0</span></div>
+      </div>
+    </div>
+
+    <!-- Layout Central: Visualizador vs Painel Customização -->
+    <div class="flex flex-col lg:flex-row items-center justify-between gap-6 my-auto py-4">
+      
+      <!-- Lado Esquerdo: Seleção de Veículo -->
+      <div class="w-full lg:w-1/3 cyber-panel p-5 rounded-xl border border-cyan-500/40">
+        <div class="flex justify-between items-center mb-4">
+          <button id="prev-car-btn" class="text-2xl text-cyan-400 hover:text-white px-3 py-1 bg-gray-900/80 rounded border border-cyan-500/40">◄</button>
+          <h3 id="car-name" class="text-xl font-bold font-orbitron text-pink-400 text-center">VECTOR RUNNER</h3>
+          <button id="next-car-btn" class="text-2xl text-cyan-400 hover:text-white px-3 py-1 bg-gray-900/80 rounded border border-cyan-500/40">►</button>
+        </div>
+
+        <!-- Atributos do Carro -->
+        <div class="space-y-3 my-4 text-xs font-orbitron">
+          <div>
+            <div class="flex justify-between text-gray-300 mb-1">
+              <span>Velocidade Máxima</span>
+              <span id="stat-speed-val">180 KM/H</span>
+            </div>
+            <div class="w-full bg-gray-900 h-2 rounded"><div id="stat-speed-bar" class="bg-cyan-400 h-full rounded" style="width: 60%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-gray-300 mb-1">
+              <span>Aceleração / Nitro</span>
+              <span id="stat-accel-val">Média</span>
+            </div>
+            <div class="w-full bg-gray-900 h-2 rounded"><div id="stat-accel-bar" class="bg-pink-500 h-full rounded" style="width: 70%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-gray-300 mb-1">
+              <span>Resistência Chassi</span>
+              <span id="stat-shield-val">100 HP</span>
+            </div>
+            <div class="w-full bg-gray-900 h-2 rounded"><div id="stat-shield-bar" class="bg-yellow-400 h-full rounded" style="width: 50%"></div></div>
+          </div>
+        </div>
+
+        <button id="buy-select-btn" class="w-full cyber-btn py-3 font-bold font-orbitron text-white tracking-wider mt-2">
+          EQUIPAR
+        </button>
+      </div>
+
+      <!-- Lado Direito: Abas de Customização (Cores, Neon, Aerofólio, Upgrades) -->
+      <div class="w-full lg:w-1/2 cyber-panel p-5 rounded-xl border border-pink-500/40">
+        <!-- Navegação de Abas -->
+        <div class="flex border-b border-gray-800 pb-3 gap-2 overflow-x-auto text-xs font-orbitron">
+          <button id="tab-paint" class="px-3 py-1.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500">🎨 Pintura</button>
+          <button id="tab-neon" class="px-3 py-1.5 rounded bg-gray-900 text-gray-400 hover:text-white">💡 Underglow Neon</button>
+          <button id="tab-spoiler" class="px-3 py-1.5 rounded bg-gray-900 text-gray-400 hover:text-white">🏎️ Aerofólio</button>
+          <button id="tab-decal" class="px-3 py-1.5 rounded bg-gray-900 text-gray-400 hover:text-white">⚡ Decalques</button>
+        </div>
+
+        <!-- Conteúdo Aba 1: Pintura -->
+        <div id="panel-paint" class="py-4 space-y-3">
+          <label class="text-xs font-orbitron text-gray-300 block">Cor da Lataria Principal:</label>
+          <div class="flex flex-wrap gap-3" id="paint-colors-container">
+            <!-- Renderizado via JS -->
+          </div>
+        </div>
+
+        <!-- Conteúdo Aba 2: Underglow Neon -->
+        <div id="panel-neon" class="hidden py-4 space-y-3">
+          <label class="text-xs font-orbitron text-gray-300 block">Luz Underglow Neon Inferior:</label>
+          <div class="flex flex-wrap gap-3" id="neon-colors-container">
+            <!-- Renderizado via JS -->
+          </div>
+        </div>
+
+        <!-- Conteúdo Aba 3: Aerofólios -->
+        <div id="panel-spoiler" class="hidden py-4 space-y-3">
+          <label class="text-xs font-orbitron text-gray-300 block">Estilo do Aerofólio Traseiro:</label>
+          <div class="grid grid-cols-3 gap-2 text-xs font-orbitron">
+            <button onclick="setSpoilerStyle(0)" class="p-2 bg-gray-900 border border-gray-700 rounded hover:border-cyan-400">Nenhum</button>
+            <button onclick="setSpoilerStyle(1)" class="p-2 bg-gray-900 border border-gray-700 rounded hover:border-cyan-400">Esportivo GT</button>
+            <button onclick="setSpoilerStyle(2)" class="p-2 bg-gray-900 border border-gray-700 rounded hover:border-cyan-400">Cyber Wing</button>
+          </div>
+        </div>
+
+        <!-- Conteúdo Aba 4: Decalques -->
+        <div id="panel-decal" class="hidden py-4 space-y-3">
+          <label class="text-xs font-orbitron text-gray-300 block">Estampa / Decalque de Corrida:</label>
+          <div class="grid grid-cols-3 gap-2 text-xs font-orbitron">
+            <button onclick="setDecalStyle(0)" class="p-2 bg-gray-900 border border-gray-700 rounded hover:border-pink-400">Liso</button>
+            <button onclick="setDecalStyle(1)" class="p-2 bg-gray-900 border border-gray-700 rounded hover:border-pink-400">Listras GT</button>
+            <button onclick="setDecalStyle(2)" class="p-2 bg-gray-900 border border-gray-700 rounded hover:border-pink-400">Cyber Grid</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Botão Sair da Garagem -->
+    <div class="text-center pt-2">
+      <button id="close-garage-btn" class="bg-gray-900 hover:bg-gray-800 text-white px-8 py-2.5 rounded-lg border border-gray-700 font-orbitron font-bold text-sm">
+        VOLTAR AO MENU PRINCIPAL
+      </button>
+    </div>
+  </div>
+
+  <!-- Tela de Game Over -->
+  <div id="game-over-menu" class="hidden absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-6 text-center">
+    <h2 class="text-4xl md:text-7xl font-black font-orbitron text-red-500 neon-text-pink mb-2">VEÍCULO DESTRUÍDO!</h2>
+    <p class="text-gray-400 text-xs md:text-sm font-orbitron mb-6">Sua nave não resistiu aos impactos na autoestrada.</p>
+
+    <div class="w-full max-w-xs cyber-panel p-6 rounded-lg border border-pink-500/50 mb-6 space-y-3 font-orbitron">
+      <div class="flex justify-between border-b border-gray-800 pb-2">
+        <span class="text-gray-400 text-sm">Distância:</span>
+        <span id="go-score" class="text-cyan-400 font-bold">0 m</span>
+      </div>
+      <div class="flex justify-between border-b border-gray-800 pb-2">
+        <span class="text-gray-400 text-sm">Moedas Ganhas:</span>
+        <span id="go-coins" class="text-yellow-400 font-bold">+0</span>
+      </div>
+      <div class="flex justify-between border-b border-gray-800 pb-2">
+        <span class="text-gray-400 text-sm">Gemas Coletadas:</span>
+        <span id="go-gems" class="text-purple-400 font-bold">+0</span>
+      </div>
+      <div class="flex justify-between pt-1">
+        <span class="text-gray-400 text-sm">Melhor Recorde:</span>
+        <span id="go-high-score" class="text-pink-400 font-bold">0 m</span>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-3 w-full max-w-xs">
+      <button id="restart-btn" class="cyber-btn py-3.5 font-bold font-orbitron text-white tracking-widest">
+        REINICIAR CORRIDA
+      </button>
+      <button id="go-garage-btn" class="cyber-btn-secondary py-3 font-bold font-orbitron text-cyan-300">
+        OFICINA / CUSTOMIZAR
+      </button>
+    </div>
+  </div>
+
+  <!-- LÓGICA DE JOGO, THREE.JS, AUDIO & CUSTOMIZAÇÃO -->
+  <script>
+    /* ==========================================
+       ESTADO GLOBAL & CONFIGURAÇÕES
+       ========================================== */
+    const GAME_STATE = {
+      menu: 'MAIN', // 'MAIN', 'PLAYING', 'GARAGE', 'GAMEOVER'
+      score: 0,
+      highScore: parseInt(localStorage.getItem('cd_high_score')) || 0,
+      coins: parseInt(localStorage.getItem('cd_coins')) || 0,
+      gems: parseInt(localStorage.getItem('cd_gems')) || 0,
+      runCoins: 0,
+      runGems: 0,
+      speed: 0,
+      baseSpeed: 0.8,
+      maxSpeed: 2.6,
+      health: 100,
+      maxHealth: 100,
+      nitro: 100,
+      isBoosting: false,
+      selectedCarIndex: parseInt(localStorage.getItem('cd_selected_car')) || 0,
+      unlockedCars: JSON.parse(localStorage.getItem('cd_unlocked_cars')) || [0],
+      audioEnabled: true,
+
+      // Customização do Veículo
+      custom: JSON.parse(localStorage.getItem('cd_custom_settings')) || {
+        paintColor: 0x00f3ff,
+        neonColor: 0xff007f,
+        spoilerStyle: 1,
+        decalStyle: 0
+      }
+    };
+
+    // Definição dos Modelos de Carros
+    const CAR_MODELS = [
+      { id: 0, name: "VECTOR RUNNER", color: 0x00f3ff, price: 0, gemPrice: 0, maxSpeed: 170, accel: "Normal", shield: 100 },
+      { id: 1, name: "SYNTH PHANTOM", color: 0xff007f, price: 300, gemPrice: 0, maxSpeed: 200, accel: "Alta", shield: 90 },
+      { id: 2, name: "CYBER INTERCEPTOR", color: 0xffd700, price: 700, gemPrice: 10, maxSpeed: 230, accel: "Super Nitro", shield: 120 },
+      { id: 3, name: "VOID SPECTOR 2099", color: 0x9d00ff, price: 1500, gemPrice: 25, maxSpeed: 280, accel: "Extrema", shield: 150 }
+    ];
+
+    const PAINT_PALETTE = [
+      { name: "Cyan Cyber", color: 0x00f3ff },
+      { name: "Pink Neon", color: 0xff007f },
+      { name: "Gold Dust", color: 0xffd700 },
+      { name: "Purple Void", color: 0x9d00ff },
+      { name: "Acid Green", color: 0x00ff66 },
+      { name: "Stealth Black", color: 0x111115 }
+    ];
+
+    const NEON_PALETTE = [
+      { name: "Magenta Glow", color: 0xff007f },
+      { name: "Cyan Glow", color: 0x00f3ff },
+      { name: "Lime Glow", color: 0x00ff66 },
+      { name: "Yellow Flare", color: 0xffea00 },
+      { name: "Ultra Violet", color: 0x8a2be2 }
+    ];
+
+    /* ==========================================
+       SISTEMA DE ÁUDIO SINTETIZADO (Web Audio API)
+       ========================================== */
+    class AudioSystem {
+      constructor() {
+        this.ctx = null;
+        this.engineOsc = null;
+        this.engineGain = null;
+      }
+
+      init() {
+        if (this.ctx) return;
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioCtx();
+        this.startBGM();
+      }
+
+      playCoinSFX() {
+        if (!GAME_STATE.audioEnabled || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(900, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1600, this.ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.12);
+      }
+
+      playGemSFX() {
+        if (!GAME_STATE.audioEnabled || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(1300, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(2200, this.ctx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.2);
+      }
+
+      playHitSFX() {
+        if (!GAME_STATE.audioEnabled || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(160, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.35);
+        gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.35);
+      }
+
+      startEngineSound() {
+        if (!GAME_STATE.audioEnabled || !this.ctx || this.engineOsc) return;
+        this.engineOsc = this.ctx.createOscillator();
+        this.engineGain = this.ctx.createGain();
+        this.engineOsc.type = 'sawtooth';
+        this.engineOsc.frequency.setValueAtTime(55, this.ctx.currentTime);
+        this.engineGain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(280, this.ctx.currentTime);
+
+        this.engineOsc.connect(filter);
+        filter.connect(this.engineGain);
+        this.engineGain.connect(this.ctx.destination);
+        this.engineOsc.start();
+      }
+
+      updateEnginePitch(ratio) {
+        if (this.engineOsc && this.ctx) {
+          const freq = 45 + ratio * 140;
+          this.engineOsc.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.1);
+        }
+      }
+
+      stopEngineSound() {
+        if (this.engineOsc) {
+          this.engineOsc.stop();
+          this.engineOsc.disconnect();
+          this.engineOsc = null;
+        }
+      }
+
+      startBGM() {
+        // Sequenciador Synthwave em tempo real
+        const notes = [110, 130.81, 146.83, 164.81, 196, 220, 261.63];
+        let step = 0;
+
+        setInterval(() => {
+          if (!GAME_STATE.audioEnabled || !this.ctx || GAME_STATE.menu !== 'PLAYING') return;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(notes[step % notes.length], this.ctx.currentTime);
+          
+          gain.gain.setValueAtTime(0.025, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.16);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.16);
+          step++;
+        }, 150);
+      }
+    }
+
+    const audio = new AudioSystem();
+
+    /* ==========================================
+       THREE.JS ENGINE & CENA 3D
+       ========================================== */
+    let scene, camera, renderer;
+    let playerCar, playerBodyMesh, underglowLight;
+    let horizonSun;
+    const LANES = [-3.6, 0, 3.6];
+    let currentLane = 1;
+    let targetX = 0;
+
+    let obstacles = [];
+    let collectibles = [];
+    let particles = [];
+    let speedLines = [];
+    let spawnTimer = 0;
+
+    function init3D() {
+      const container = document.getElementById('canvas-container');
+
+      scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x030308, 0.014);
+
+      camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 3.6, 7.5);
+      camera.lookAt(0, 1, -10);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      container.appendChild(renderer.domElement);
+
+      // Iluminação Futurista
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+      scene.add(ambientLight);
+
+      const dirLight = new THREE.DirectionalLight(0xff007f, 1.2);
+      dirLight.position.set(0, 20, -20);
+      scene.add(dirLight);
+
+      // Criar Ambiente
+      createEnvironment();
+
+      // Criar Carro do Jogador
+      buildPlayerCar();
+
+      window.addEventListener('resize', onWindowResize);
+    }
+
+    /* ==========================================
+       CONSTRUÇÃO DO CENÁRIO RETRO-CYBER
+       ========================================== */
+    function createEnvironment() {
+      // Pista Principal (Asfalto Escuro)
+      const trackGeo = new THREE.PlaneGeometry(12.5, 400);
+      const trackMat = new THREE.MeshStandardMaterial({ color: 0x080812, roughness: 0.7 });
+      const track = new THREE.Mesh(trackGeo, trackMat);
+      track.rotation.x = -Math.PI / 2;
+      track.position.z = -180;
+      scene.add(track);
+
+      // Linhas Divisórias de Faixa
+      for (let i = 0; i < 20; i++) {
+        const lineGeo = new THREE.PlaneGeometry(0.15, 6);
+        const lineMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
+        const line1 = new THREE.Mesh(lineGeo, lineMat);
+        line1.rotation.x = -Math.PI / 2;
+        line1.position.set(-1.8, 0.02, -i * 20);
+        scene.add(line1);
+
+        const line2 = new THREE.Mesh(lineGeo, lineMat);
+        line2.rotation.x = -Math.PI / 2;
+        line2.position.set(1.8, 0.02, -i * 20);
+        scene.add(line2);
+      }
+
+      // Bordas Neon Laterais
+      const borderGeo = new THREE.BoxGeometry(0.3, 0.25, 400);
+      const borderMat = new THREE.MeshBasicMaterial({ color: 0xff007f });
+      
+      const leftBorder = new THREE.Mesh(borderGeo, borderMat);
+      leftBorder.position.set(-6.3, 0.1, -180);
+      scene.add(leftBorder);
+
+      const rightBorder = new THREE.Mesh(borderGeo, borderMat);
+      rightBorder.position.set(6.3, 0.1, -180);
+      scene.add(rightBorder);
+
+      // Grade Synthwave no Horizonte
+      const gridHelper = new THREE.GridHelper(300, 50, 0xff007f, 0x00f3ff);
+      gridHelper.position.set(0, -0.1, -160);
+      scene.add(gridHelper);
+
+      // Sol Neon Gigante no Horizonte
+      const sunGeo = new THREE.CircleGeometry(42, 32);
+      const sunMat = new THREE.MeshBasicMaterial({ color: 0xff0055, side: THREE.DoubleSide });
+      horizonSun = new THREE.Mesh(sunGeo, sunMat);
+      horizonSun.position.set(0, 16, -210);
+      scene.add(horizonSun);
+
+      // Prédios Futuristas na Periferia
+      createCyberCity();
+    }
+
+    function createCyberCity() {
+      const bldgMat = new THREE.MeshStandardMaterial({ color: 0x0a0a1a, roughness: 0.3 });
+      const windowMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff, wireframe: true });
+
+      for (let i = 0; i < 25; i++) {
+        const h = 20 + Math.random() * 30;
+        const bldgGeo = new THREE.BoxGeometry(8, h, 8);
+        
+        // Prédio Esquerdo
+        const bldgL = new THREE.Mesh(bldgGeo, bldgMat);
+        bldgL.position.set(-22 - Math.random() * 10, h / 2, -i * 16);
+        scene.add(bldgL);
+
+        // Prédio Direito
+        const bldgR = new THREE.Mesh(bldgGeo, bldgMat);
+        bldgR.position.set(22 + Math.random() * 10, h / 2, -i * 16);
+        scene.add(bldgR);
+      }
+    }
+
+    /* ==========================================
+       CONSTRUTOR DO VEÍCULO 3D CUSTOMIZÁVEL
+       ========================================== */
+    function buildPlayerCar() {
+      if (playerCar) scene.remove(playerCar);
+
+      playerCar = new THREE.Group();
+
+      const carColor = GAME_STATE.custom.paintColor || CAR_MODELS[GAME_STATE.selectedCarIndex].color;
+      const neonColor = GAME_STATE.custom.neonColor || 0xff007f;
+
+      // Corpo Principal do Veículo
+      const bodyGeo = new THREE.BoxGeometry(1.6, 0.55, 3.2);
+      const bodyMat = new THREE.MeshStandardMaterial({ color: carColor, metalness: 0.85, roughness: 0.15 });
+      playerBodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+      playerBodyMesh.position.y = 0.5;
+      playerCar.add(playerBodyMesh);
+
+      // Cabine / Vidros Fumê
+      const cabinGeo = new THREE.BoxGeometry(1.2, 0.45, 1.4);
+      const cabinMat = new THREE.MeshStandardMaterial({ color: 0x050508, roughness: 0.05 });
+      const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+      cabin.position.set(0, 0.85, -0.1);
+      playerCar.add(cabin);
+
+      // Decalque de Corrida (Listras GT)
+      if (GAME_STATE.custom.decalStyle === 1) {
+        const stripeGeo = new THREE.PlaneGeometry(0.3, 3.2);
+        const stripeMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+        const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+        stripe.rotation.x = -Math.PI / 2;
+        stripe.position.set(0, 0.78, 0);
+        playerCar.add(stripe);
+      }
+
+      // Aerofólio Customizável
+      if (GAME_STATE.custom.spoilerStyle > 0) {
+        const spoilerWingGeo = new THREE.BoxGeometry(1.8, 0.08, 0.4);
+        const spoilerMat = new THREE.MeshStandardMaterial({ color: 0x111115, metalness: 0.9 });
+        const wing = new THREE.Mesh(spoilerWingGeo, spoilerMat);
+
+        const pillarGeo = new THREE.BoxGeometry(0.1, 0.35, 0.1);
+        const p1 = new THREE.Mesh(pillarGeo, spoilerMat);
+        p1.position.set(-0.6, 0.8, 1.4);
+        const p2 = new THREE.Mesh(pillarGeo, spoilerMat);
+        p2.position.set(0.6, 0.8, 1.4);
+
+        wing.position.set(0, 0.98, 1.4);
+        playerCar.add(p1);
+        playerCar.add(p2);
+        playerCar.add(wing);
+      }
+
+      // Luzes Neon Traseiras
+      const tailLightGeo = new THREE.BoxGeometry(1.4, 0.08, 0.08);
+      const tailLightMat = new THREE.MeshBasicMaterial({ color: 0xff0033 });
+      const tailLight = new THREE.Mesh(tailLightGeo, tailLightMat);
+      tailLight.position.set(0, 0.55, 1.61);
+      playerCar.add(tailLight);
+
+      // Underglow Neon Inferior
+      underglowLight = new THREE.PointLight(neonColor, 2.5, 6);
+      underglowLight.position.set(0, 0.1, 0);
+      playerCar.add(underglowLight);
+
+      // Rodas Cyber
+      const wheelGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.22, 16);
+      const wheelMat = new THREE.MeshStandardMaterial({ color: 0x151518, roughness: 0.5 });
+      
+      const wheelPositions = [
+        [-0.85, 0.32, 0.95], [0.85, 0.32, 0.95],
+        [-0.85, 0.32, -0.95], [0.85, 0.32, -0.95]
+      ];
+
+      wheelPositions.forEach(pos => {
+        const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(...pos);
+        playerCar.add(wheel);
+      });
+
+      playerCar.position.set(LANES[currentLane], 0, 0);
+      scene.add(playerCar);
+    }
+
+    /* ==========================================
+       GERADOR DE OBSTÁCULOS E ITEM COLETÁVEIS
+       ========================================== */
+    function spawnEntities() {
+      spawnTimer++;
+      if (spawnTimer % 40 === 0) {
+        const lane = Math.floor(Math.random() * 3);
+        const laneX = LANES[lane];
+        const chance = Math.random();
+
+        if (chance < 0.45) {
+          createObstacleCar(laneX);
+        } else if (chance < 0.75) {
+          createCoin(laneX);
+        } else if (chance < 0.88) {
+          createGem(laneX);
+        } else {
+          createHealthKit(laneX);
+        }
+      }
+    }
+
+    function createObstacleCar(x) {
+      const obsGroup = new THREE.Group();
+      const bodyGeo = new THREE.BoxGeometry(1.5, 0.6, 2.8);
+      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x330011, roughness: 0.6 });
+      const mesh = new THREE.Mesh(bodyGeo, bodyMat);
+      mesh.position.y = 0.5;
+      obsGroup.add(mesh);
+
+      obsGroup.position.set(x, 0, -130);
+      scene.add(obsGroup);
+      obstacles.push(obsGroup);
+    }
+
+    function createCoin(x) {
+      const geo = new THREE.CylinderGeometry(0.45, 0.45, 0.08, 16);
+      const mat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.9, roughness: 0.1 });
+      const coin = new THREE.Mesh(geo, mat);
+      coin.rotation.x = Math.PI / 2;
+      coin.position.set(x, 0.6, -130);
+      coin.type = 'COIN';
+      scene.add(coin);
+      collectibles.push(coin);
+    }
+
+    function createGem(x) {
+      const geo = new THREE.OctahedronGeometry(0.45);
+      const mat = new THREE.MeshBasicMaterial({ color: 0x9d00ff, wireframe: true });
+      const gem = new THREE.Mesh(geo, mat);
+      gem.position.set(x, 0.7, -130);
+      gem.type = 'GEM';
+      scene.add(gem);
+      collectibles.push(gem);
+    }
+
+    function createHealthKit(x) {
+      const geo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+      const mat = new THREE.MeshBasicMaterial({ color: 0x00ff66, wireframe: true });
+      const kit = new THREE.Mesh(geo, mat);
+      kit.position.set(x, 0.7, -130);
+      kit.type = 'HEALTH';
+      scene.add(kit);
+      collectibles.push(kit);
+    }
+
+    /* ==========================================
+       LOOP PRINCIPAL DE ATUALIZAÇÃO (GAMEPLAY)
+       ========================================== */
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (GAME_STATE.menu === 'PLAYING') {
+        updateGameplay();
+      } else if (playerCar) {
+        // Animação de rotação suave no menu/garagem
+        playerCar.rotation.y += 0.008;
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    function updateGameplay() {
+      // Transição suave entre faixas
+      targetX = LANES[currentLane];
+      playerCar.position.x += (targetX - playerCar.position.x) * 0.22;
+
+      // Inclinação aerodinâmica
+      playerCar.rotation.z = (playerCar.position.x - targetX) * 0.12;
+      playerCar.rotation.y = (targetX - playerCar.position.x) * 0.04;
+
+      // Booster / Acceleration Handling
+      let currentMaxSpeed = GAME_STATE.maxSpeed;
+      if (GAME_STATE.isBoosting && GAME_STATE.nitro > 0) {
+        currentMaxSpeed *= 1.35;
+        GAME_STATE.nitro = Math.max(0, GAME_STATE.nitro - 0.6);
+        createSpeedParticles();
+      } else {
+        // Regarregar Nitro gradualmente
+        GAME_STATE.nitro = Math.min(100, GAME_STATE.nitro + 0.1);
+      }
+
+      // Atualizar velocidade progressiva
+      if (GAME_STATE.speed < currentMaxSpeed) {
+        GAME_STATE.speed += 0.0004;
+      }
+
+      // Atualizar HUD
+      GAME_STATE.score += Math.round(GAME_STATE.speed * 2.2);
+      document.getElementById('score-text').innerText = `${GAME_STATE.score} m`;
+      document.getElementById('speed-text').innerHTML = `${Math.round(GAME_STATE.speed * 150)} <span class="text-xs font-normal text-white">KM/H</span>`;
+      
+      document.getElementById('nitro-val').innerText = `${Math.round(GAME_STATE.nitro)}%`;
+      document.getElementById('nitro-bar').style.width = `${GAME_STATE.nitro}%`;
+
+      audio.updateEnginePitch(GAME_STATE.speed / GAME_STATE.maxSpeed);
+
+      // Gerar Obstáculos e Coletáveis
+      spawnEntities();
+
+      // Mover Obstáculos e Testar Colisão
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obs = obstacles[i];
+        obs.position.z += GAME_STATE.speed * 2.6;
+
+        const distZ = Math.abs(obs.position.z - playerCar.position.z);
+        const distX = Math.abs(obs.position.x - playerCar.position.x);
+
+        if (distZ < 1.8 && distX < 1.1) {
+          audio.playHitSFX();
+          createExplosionParticles(playerCar.position.x, playerCar.position.y + 0.5, playerCar.position.z);
+
+          GAME_STATE.health -= 35;
+          updateHealthUI();
+
+          scene.remove(obs);
+          obstacles.splice(i, 1);
+
+          if (GAME_STATE.health <= 0) {
+            triggerGameOver();
+          }
+          continue;
+        }
+
+        if (obs.position.z > 10) {
+          scene.remove(obs);
+          obstacles.splice(i, 1);
+        }
+      }
+
+      // Mover e Testar Coletáveis
+      for (let i = collectibles.length - 1; i >= 0; i--) {
+        const item = collectibles[i];
+        item.position.z += GAME_STATE.speed * 2.6;
+        item.rotation.y += 0.04;
+
+        const distZ = Math.abs(item.position.z - playerCar.position.z);
+        const distX = Math.abs(item.position.x - playerCar.position.x);
+
+        if (distZ < 1.5 && distX < 1.1) {
+          if (item.type === 'COIN') {
+            GAME_STATE.coins += 1;
+            GAME_STATE.runCoins += 1;
+            audio.playCoinSFX();
+          } else if (item.type === 'GEM') {
+            GAME_STATE.gems += 1;
+            GAME_STATE.runGems += 1;
+            audio.playGemSFX();
+          } else if (item.type === 'HEALTH') {
+            GAME_STATE.health = Math.min(100, GAME_STATE.health + 25);
+            updateHealthUI();
+          }
+
+          updateCoinsUI();
+          scene.remove(item);
+          collectibles.splice(i, 1);
+          continue;
+        }
+
+        if (item.position.z > 10) {
+          scene.remove(item);
+          collectibles.splice(i, 1);
+        }
+      }
+
+      updateParticles();
+    }
+
+    /* ==========================================
+       PARTÍCULAS & EFEITOS VISUAIS
+       ========================================== */
+    function createSpeedParticles() {
+      const pGeo = new THREE.BoxGeometry(0.05, 0.05, 0.8);
+      const pMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
+      const p = new THREE.Mesh(pGeo, pMat);
+      p.position.set(
+        playerCar.position.x + (Math.random() - 0.5) * 2,
+        0.2,
+        playerCar.position.z + 1.5
+      );
+      p.vz = 0.5;
+      p.life = 0.5;
+      scene.add(p);
+      particles.push(p);
+    }
+
+    function createExplosionParticles(x, y, z) {
+      for (let i = 0; i < 20; i++) {
+        const pGeo = new THREE.BoxGeometry(0.15, 0.15, 0.15);
+        const pMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
+        const p = new THREE.Mesh(pGeo, pMat);
+        p.position.set(x, y, z);
+        p.vx = (Math.random() - 0.5) * 0.4;
+        p.vy = Math.random() * 0.4;
+        p.vz = (Math.random() - 0.5) * 0.4;
+        p.life = 1.0;
+        scene.add(p);
+        particles.push(p);
+      }
+    }
+
+    function updateParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        if (p.vx) p.position.x += p.vx;
+        if (p.vy) p.position.y += p.vy;
+        if (p.vz) p.position.z += p.vz;
+        p.life -= 0.04;
+        p.scale.multiplyScalar(0.92);
+
+        if (p.life <= 0) {
+          scene.remove(p);
+          particles.splice(i, 1);
+        }
+      }
+    }
+
+    /* ==========================================
+       GERENCIAMENTO DE INTERFACE (UI)
+       ========================================== */
+    function updateCoinsUI() {
+      document.getElementById('coins-text').innerText = GAME_STATE.coins;
+      document.getElementById('gems-text').innerText = GAME_STATE.gems;
+      document.getElementById('shop-coins').innerText = GAME_STATE.coins;
+      document.getElementById('shop-gems').innerText = GAME_STATE.gems;
+
+      localStorage.setItem('cd_coins', GAME_STATE.coins);
+      localStorage.setItem('cd_gems', GAME_STATE.gems);
+    }
+
+    function updateHealthUI() {
+      const val = Math.max(0, GAME_STATE.health);
+      document.getElementById('health-val').innerText = `${val}%`;
+      document.getElementById('health-bar').style.width = `${val}%`;
+    }
+
+    function startGame() {
+      GAME_STATE.menu = 'PLAYING';
+      GAME_STATE.score = 0;
+      GAME_STATE.runCoins = 0;
+      GAME_STATE.runGems = 0;
+      GAME_STATE.health = CAR_MODELS[GAME_STATE.selectedCarIndex].shield;
+      GAME_STATE.nitro = 100;
+      GAME_STATE.speed = GAME_STATE.baseSpeed;
+      currentLane = 1;
+
+      // Limpar Objetos
+      obstacles.forEach(o => scene.remove(o));
+      collectibles.forEach(c => scene.remove(c));
+      obstacles = [];
+      collectibles = [];
+
+      playerCar.rotation.set(0, 0, 0);
+      playerCar.position.set(LANES[currentLane], 0, 0);
+
+      updateHealthUI();
+      updateCoinsUI();
+
+      document.getElementById('main-menu').classList.add('hidden');
+      document.getElementById('game-over-menu').classList.add('hidden');
+      document.getElementById('garage-menu').classList.add('hidden');
+      document.getElementById('hud').classList.remove('hidden');
+
+      audio.init();
+      audio.startEngineSound();
+    }
+
+    function triggerGameOver() {
+      GAME_STATE.menu = 'GAMEOVER';
+      audio.stopEngineSound();
+
+      if (GAME_STATE.score > GAME_STATE.highScore) {
+        GAME_STATE.highScore = GAME_STATE.score;
+        localStorage.setItem('cd_high_score', GAME_STATE.highScore);
+      }
+
+      document.getElementById('go-score').innerText = `${GAME_STATE.score} m`;
+      document.getElementById('go-coins').innerText = `+${GAME_STATE.runCoins}`;
+      document.getElementById('go-gems').innerText = `+${GAME_STATE.runGems}`;
+      document.getElementById('go-high-score').innerText = `${GAME_STATE.highScore} m`;
+
+      document.getElementById('hud').classList.add('hidden');
+      document.getElementById('game-over-menu').classList.remove('hidden');
+    }
+
+    /* ==========================================
+       PAINEL DE GARAGEM E CUSTOMIZAÇÃO
+       ========================================== */
+    let previewCarIndex = GAME_STATE.selectedCarIndex;
+
+    function openGarage() {
+      GAME_STATE.menu = 'GARAGE';
+      previewCarIndex = GAME_STATE.selectedCarIndex;
+      renderCustomizationPalette();
+      updateGarageView();
+
+      document.getElementById('main-menu').classList.add('hidden');
+      document.getElementById('game-over-menu').classList.add('hidden');
+      document.getElementById('garage-menu').classList.remove('hidden');
+    }
+
+    function renderCustomizationPalette() {
+      // Renderizar Paleta de Pintura
+      const paintContainer = document.getElementById('paint-colors-container');
+      paintContainer.innerHTML = '';
+      PAINT_PALETTE.forEach(p => {
+        const dot = document.createElement('div');
+        dot.className = 'color-dot';
+        dot.style.backgroundColor = `#${p.color.toString(16).padStart(6, '0')}`;
+        dot.onclick = () => {
+          GAME_STATE.custom.paintColor = p.color;
+          saveCustomSettings();
+          buildPlayerCar();
+        };
+        paintContainer.appendChild(dot);
+      });
+
+      // Renderizar Paleta de Neon Underglow
+      const neonContainer = document.getElementById('neon-colors-container');
+      neonContainer.innerHTML = '';
+      NEON_PALETTE.forEach(n => {
+        const dot = document.createElement('div');
+        dot.className = 'color-dot';
+        dot.style.backgroundColor = `#${n.color.toString(16).padStart(6, '0')}`;
+        dot.onclick = () => {
+          GAME_STATE.custom.neonColor = n.color;
+          saveCustomSettings();
+          buildPlayerCar();
+        };
+        neonContainer.appendChild(dot);
+      });
+    }
+
+    function setSpoilerStyle(styleIndex) {
+      GAME_STATE.custom.spoilerStyle = styleIndex;
+      saveCustomSettings();
+      buildPlayerCar();
+    }
+
+    function setDecalStyle(styleIndex) {
+      GAME_STATE.custom.decalStyle = styleIndex;
+      saveCustomSettings();
+      buildPlayerCar();
+    }
+
+    function saveCustomSettings() {
+      localStorage.setItem('cd_custom_settings', JSON.stringify(GAME_STATE.custom));
+    }
+
+    function updateGarageView() {
+      const car = CAR_MODELS[previewCarIndex];
+      document.getElementById('car-name').innerText = car.name;
+      document.getElementById('stat-speed-val').innerText = `${car.maxSpeed} KM/H`;
+      document.getElementById('stat-accel-val').innerText = car.accel;
+      document.getElementById('stat-shield-val').innerText = `${car.shield} HP`;
+
+      document.getElementById('stat-speed-bar').style.width = `${(car.maxSpeed / 300) * 100}%`;
+
+      const buyBtn = document.getElementById('buy-select-btn');
+      const isUnlocked = GAME_STATE.unlockedCars.includes(car.id);
+      const isSelected = GAME_STATE.selectedCarIndex === car.id;
+
+      if (isSelected) {
+        buyBtn.innerText = "EQUIPADO";
+        buyBtn.disabled = true;
+        buyBtn.className = "w-full bg-gray-800 py-3 font-bold font-orbitron text-gray-500 cursor-not-allowed";
+      } else if (isUnlocked) {
+        buyBtn.innerText = "EQUIPAR";
+        buyBtn.disabled = false;
+        buyBtn.className = "w-full cyber-btn py-3 font-bold font-orbitron text-white tracking-wider";
+      } else {
+        buyBtn.innerText = `COMPRAR (🪙 ${car.price} | 💎 ${car.gemPrice})`;
+        buyBtn.disabled = false;
+        buyBtn.className = "w-full bg-amber-600 py-3 font-bold font-orbitron text-white tracking-wider hover:brightness-110";
+      }
+
+      GAME_STATE.selectedCarIndex = previewCarIndex;
+      buildPlayerCar();
+    }
+
+    /* ==========================================
+       CONTROLES & LISTENERS
+       ========================================== */
+    function setupControls() {
+      window.addEventListener('keydown', (e) => {
+        if (GAME_STATE.menu !== 'PLAYING') return;
+
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+          if (currentLane > 0) currentLane--;
+        } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+          if (currentLane < LANES.length - 1) currentLane++;
+        } else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+          GAME_STATE.isBoosting = true;
+        } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+          GAME_STATE.speed = Math.max(GAME_STATE.speed - 0.2, GAME_STATE.baseSpeed);
+        }
+      });
+
+      window.addEventListener('keyup', (e) => {
+        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+          GAME_STATE.isBoosting = false;
+        }
+      });
+
+      // Controles Mobile
+      document.getElementById('btn-left').addEventListener('click', () => {
+        if (currentLane > 0) currentLane--;
+      });
+      document.getElementById('btn-right').addEventListener('click', () => {
+        if (currentLane < LANES.length - 1) currentLane++;
+      });
+      document.getElementById('btn-boost').addEventListener('touchstart', () => GAME_STATE.isBoosting = true);
+      document.getElementById('btn-boost').addEventListener('touchend', () => GAME_STATE.isBoosting = false);
+      document.getElementById('btn-brake').addEventListener('click', () => {
+        GAME_STATE.speed = Math.max(GAME_STATE.speed - 0.3, GAME_STATE.baseSpeed);
+      });
+
+      // Botões de Menu & Abas da Garagem
+      document.getElementById('play-btn').addEventListener('click', startGame);
+      document.getElementById('garage-btn').addEventListener('click', openGarage);
+      document.getElementById('restart-btn').addEventListener('click', startGame);
+      document.getElementById('go-garage-btn').addEventListener('click', openGarage);
+
+      document.getElementById('close-garage-btn').addEventListener('click', () => {
+        document.getElementById('garage-menu').classList.add('hidden');
+        document.getElementById('main-menu').classList.remove('hidden');
+        GAME_STATE.menu = 'MAIN';
+      });
+
+      document.getElementById('prev-car-btn').addEventListener('click', () => {
+        previewCarIndex = (previewCarIndex - 1 + CAR_MODELS.length) % CAR_MODELS.length;
+        updateGarageView();
+      });
+
+      document.getElementById('next-car-btn').addEventListener('click', () => {
+        previewCarIndex = (previewCarIndex + 1) % CAR_MODELS.length;
+        updateGarageView();
+      });
+
+      // Alternância de Abas Customização
+      const tabs = ['paint', 'neon', 'spoiler', 'decal'];
+      tabs.forEach(t => {
+        document.getElementById(`tab-${t}`).addEventListener('click', () => {
+          tabs.forEach(other => {
+            document.getElementById(`panel-${other}`).classList.add('hidden');
+            document.getElementById(`tab-${other}`).className = 'px-3 py-1.5 rounded bg-gray-900 text-gray-400 hover:text-white';
+          });
+          document.getElementById(`panel-${t}`).classList.remove('hidden');
+          document.getElementById(`tab-${t}`).className = 'px-3 py-1.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500';
+        });
+      });
+
+      document.getElementById('buy-select-btn').addEventListener('click', () => {
+        const car = CAR_MODELS[previewCarIndex];
+        const isUnlocked = GAME_STATE.unlockedCars.includes(car.id);
+
+        if (isUnlocked) {
+          GAME_STATE.selectedCarIndex = car.id;
+          localStorage.setItem('cd_selected_car', car.id);
+          updateGarageView();
+        } else {
+          if (GAME_STATE.coins >= car.price && GAME_STATE.gems >= car.gemPrice) {
+            GAME_STATE.coins -= car.price;
+            GAME_STATE.gems -= car.gemPrice;
+            GAME_STATE.unlockedCars.push(car.id);
+            GAME_STATE.selectedCarIndex = car.id;
+
+            localStorage.setItem('cd_unlocked_cars', JSON.stringify(GAME_STATE.unlockedCars));
+            localStorage.setItem('cd_selected_car', car.id);
+
+            updateCoinsUI();
+            updateGarageView();
+          } else {
+            alert('Saldo insuficiente de Moedas ou Gemas!');
+          }
+        }
+      });
+
+      document.getElementById('audio-toggle-btn').addEventListener('click', () => {
+        GAME_STATE.audioEnabled = !GAME_STATE.audioEnabled;
+        document.getElementById('audio-toggle-btn').innerText = `🔊 SOM: ${GAME_STATE.audioEnabled ? 'LIGADO' : 'DESLIGADO'}`;
+      });
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    window.onload = () => {
+      init3D();
+      setupControls();
+      updateCoinsUI();
+      document.getElementById('high-score-menu').innerText = `${GAME_STATE.highScore} m`;
+      animate();
+    };
+  </script>
+</body>
+</html>
